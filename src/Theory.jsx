@@ -9,17 +9,20 @@ function Theory() {
 
   useEffect(() => {
     // Загружаем содержимое Markdown файла
-    fetch(`/src/content/theory/${lessonId}.md`)
-      .then(response => response.text())
-      .then(text => {
-        setContent(text);
+    // Используем динамический import для Vite
+    const loadLesson = async () => {
+      try {
+        const module = await import(`./content/theory/${lessonId}.md?raw`);
+        setContent(module.default);
         setLoading(false);
-      })
-      .catch(error => {
+      } catch (error) {
         console.error('Ошибка загрузки урока:', error);
         setContent('# Ошибка\n\nНе удалось загрузить содержимое урока.');
         setLoading(false);
-      });
+      }
+    };
+    
+    loadLesson();
   }, [lessonId]);
 
   if (loading) {
