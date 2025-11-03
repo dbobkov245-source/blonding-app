@@ -1,19 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, CheckSquare, Brain } from 'lucide-react'; // 👈 Шаг 4 (см. ниже)
+import { BookOpen, Brain } from 'lucide-react';
 
-// ... (Весь ваш код с 'import.meta.glob' и 'lessons' остается БЕЗ ИЗМЕНЕНИЙ) ...
-const lessonModules = import.meta.glob('./content/theory/*.md', { 
-  /* ... */ 
+// --- 1. АВТОМАТИЗАЦИЯ ---
+// Вот эта строка: 'as: 'raw'' — КРИТИЧЕСКИ ВАЖНА
+const lessonModules = import.meta.glob('./content/theory/*.md', {
+  eager: true,
+  as: 'raw', // Эта опция исправляет ошибку
 });
+
+// --- 2. ОБРАБОТКА ФАЙЛОВ ---
 const lessons = Object.entries(lessonModules).map(([path, content]) => {
-  /* ... */
+  const lessonId = path.split('/').pop().replace('.md', '');
+  const firstLine = content.trim().split('\n')[0];
+  const title = firstLine.replace(/^#\s*/, '').trim(); 
+
+  return {
+    id: lessonId,
+    title: title || lessonId,
+    path: `/theory/${lessonId}`,
+  };
 });
+
 lessons.sort((a, b) => 
   a.id.localeCompare(b.id, undefined, { numeric: true })
 );
-// (КОНЕЦ КОДА ОСТАЕТСЯ ТЕМ ЖЕ)
 
+// --- 3. РЕНДЕРИНГ ---
 function Home() {
   return (
     <div className="max-w-5xl mx-auto p-4 md:p-8">
@@ -27,7 +40,7 @@ function Home() {
       </header>
 
       <main className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* === Блок Уроков (Занимает 2/3) === */}
         <div className="md:col-span-2 bg-surface rounded-lg shadow-sm border border-slate-200 p-6">
           <h2 className="font-heading text-2xl font-semibold text-text-primary mb-4 flex items-center">
@@ -65,16 +78,6 @@ function Home() {
             </Link>
           </div>
         </div>
-
-        {/* === (Опционально) Блок Чек-листов (Занимает 1/3) === */}
-        {/* <div className="bg-surface rounded-lg shadow-sm border border-slate-200 p-6">
-          <h2 className="font-heading text-2xl font-semibold text-text-primary mb-4 flex items-center">
-            <CheckSquare className="w-5 h-5 mr-2 text-blue-500" />
-            Чек-листы
-          </h2>
-          <p className="text-text-secondary">Скоро...</p>
-        </div> 
-        */}
 
       </main>
     </div>
