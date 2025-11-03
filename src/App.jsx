@@ -1,16 +1,21 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// Обратите внимание: мы снова импортируем BrowserRouter, а не Router
+import { BrowserRouter, Routes, Route } from 'react-router-dom'; 
 import Home from './Home';
 import Theory from './Theory';
 
+// Эта строка автоматически возьмет '/blonding-app/' из vite.config.js
+const base = import.meta.env.BASE_URL;
+
 function App() {
   return (
-    <Router>
+    // Мы передаем 'base' в 'basename' роутера
+    <BrowserRouter basename={base}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/theory/:lessonId" element={<Theory />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
