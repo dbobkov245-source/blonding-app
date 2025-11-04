@@ -27,7 +27,7 @@ export default async function handler(request, response) {
       },
       method: "POST",
       body: JSON.stringify({
-        model: "google/gemma-2-2b-it",  // Можно добавить суффикс, например ":fastest" для оптимизации
+        model: "meta-llama/Llama-3.1-8B-Instruct:fastest",  // Можно добавить суффикс, например ":fastest" для оптимизации
         messages: [
           {
             role: "user",
