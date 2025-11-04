@@ -16,28 +16,29 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
-    // Добавляем отладочную информацию
-    console.log("HF_TOKEN exists:", !!HF_TOKEN);
-    console.log("HF_TOKEN starts with:", HF_TOKEN.substring(0, 7));
-    
-    // Пробуем новый chat completions endpoint
-    const url = "https://api-inference.huggingface.co/models/google/gemma-7b-it/v1/chat/completions";
+    // ПРАВИЛЬНЫЙ URL для нового роутера - без /hf-inference в конце!
+    const url = "https://api-inference.huggingface.co/models/google/gemma-7b-it";
     console.log("Request URL:", url);
     
     const hfResponse = await fetch(url, {
       headers: {
         "Authorization": `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-use-cache": "false" // Отключаем кеш для тестирования
       },
       method: "POST",
       body: JSON.stringify({
-        model: "google/gemma-7b-it",
-        messages: [
-          { role: "user", content: inputs }
-        ],
-        max_tokens: 250,
-        temperature: 0.7,
-        stream: false
+        inputs: inputs,
+        parameters: {
+          max_new_tokens: 250,
+          temperature: 0.7,
+          top_p: 0.95,
+          return_full_text: false
+        },
+        options: {
+          use_cache: false,
+          wait_for_model: true // Ждём, если модель загружается
+        }
       })
     });
     
@@ -56,10 +57,11 @@ export default async function handler(request, response) {
       return response.status(hfResponse.status).json({ 
         error: 'Invalid API response', 
         details: textResponse,
-        status: hfResponse.status,
-        url: url
+        status: hfResponse.status
       });
     }
+    
+    console.log("Response body:", JSON.stringify(responseBody, null, 2));
     
     if (!hfResponse.ok) {
       console.error("HF API Error:", responseBody); 
@@ -73,24 +75,19 @@ export default async function handler(request, response) {
         });
       }
       
+      // Если снова редирект на новый API
+      if (responseBody.error && responseBody.error.includes("router.huggingface.co")) {
+        console.error("API migration in progress. Trying alternative approach...");
+      }
+      
       return response.status(hfResponse.status).json({ 
         error: 'HF API Error', 
         details: responseBody 
       });
     }
     
-    // Преобразуем ответ в формат для фронтенда
-    let finalResponse;
-    if (responseBody.choices && responseBody.choices[0]?.message?.content) {
-      // Формат chat completions
-      finalResponse = [{
-        generated_text: responseBody.choices[0].message.content
-      }];
-    } else {
-      finalResponse = responseBody;
-    }
-    
-    return response.status(200).json(finalResponse);
+    // Успешный ответ
+    return response.status(200).json(responseBody);
     
   } catch (error) {
     console.error("Proxy Catch Block Error:", error.message);
