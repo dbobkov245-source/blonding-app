@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, X } from 'lucide-react';
 
 // Импортируем наш JSON-файл с тестом
-import quizData from '../content/quizzes/lesson-1-quiz.json';
+import quizData from './content/quizzes/lesson-1-quiz.json';
 
 function Quizzes() {
   const [quiz, setQuiz] = useState([]);
