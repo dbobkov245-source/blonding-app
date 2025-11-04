@@ -16,26 +16,33 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
-    // Попробуем старый endpoint - он может всё ещё работать
-    const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/google/gemma-7b-it",
-      {
-        headers: {
-          "Authorization": `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        method: "POST",
-        body: JSON.stringify({
-          inputs: inputs,
-          parameters: {
-            max_new_tokens: 250,
-            temperature: 0.7,
-            top_p: 0.95,
-            return_full_text: false
-          }
-        })
-      }
-    );
+    // Добавляем отладочную информацию
+    console.log("HF_TOKEN exists:", !!HF_TOKEN);
+    console.log("HF_TOKEN starts with:", HF_TOKEN.substring(0, 7));
+    
+    // Пробуем новый chat completions endpoint
+    const url = "https://api-inference.huggingface.co/models/google/gemma-7b-it/v1/chat/completions";
+    console.log("Request URL:", url);
+    
+    const hfResponse = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      method: "POST",
+      body: JSON.stringify({
+        model: "google/gemma-7b-it",
+        messages: [
+          { role: "user", content: inputs }
+        ],
+        max_tokens: 250,
+        temperature: 0.7,
+        stream: false
+      })
+    });
+    
+    console.log("Response status:", hfResponse.status);
+    console.log("Response content-type:", hfResponse.headers.get("content-type"));
     
     // Проверяем Content-Type перед парсингом
     const contentType = hfResponse.headers.get("content-type");
@@ -49,7 +56,8 @@ export default async function handler(request, response) {
       return response.status(hfResponse.status).json({ 
         error: 'Invalid API response', 
         details: textResponse,
-        status: hfResponse.status
+        status: hfResponse.status,
+        url: url
       });
     }
     
@@ -71,8 +79,18 @@ export default async function handler(request, response) {
       });
     }
     
-    // Успешный ответ
-    return response.status(200).json(responseBody);
+    // Преобразуем ответ в формат для фронтенда
+    let finalResponse;
+    if (responseBody.choices && responseBody.choices[0]?.message?.content) {
+      // Формат chat completions
+      finalResponse = [{
+        generated_text: responseBody.choices[0].message.content
+      }];
+    } else {
+      finalResponse = responseBody;
+    }
+    
+    return response.status(200).json(finalResponse);
     
   } catch (error) {
     console.error("Proxy Catch Block Error:", error.message);
