@@ -1,20 +1,14 @@
 // api/proxy.js
-// Это Node.js код, который будет работать на сервере Vercel
 
 export default async function handler(request, response) {
-  // 1. Принимаем только POST-запросы
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    // 2. Получаем сообщение пользователя из тела запроса
     const { inputs } = request.body;
-
-    // 3. Получаем СЕКРЕТНЫЙ ключ (который вы ввели в Vercel)
     const HF_TOKEN = process.env.HF_TOKEN;
 
-    // 4. Делаем безопасный запрос на Hugging Face
     const hfResponse = await fetch(
       "https://api-inference.huggingface.co/models/google/gemma-7b-it",
       {
@@ -27,14 +21,27 @@ export default async function handler(request, response) {
       }
     );
 
+    // --- НОВАЯ ЛОГИКА ОБРАБОТКИ ОШИБОК ---
     if (!hfResponse.ok) {
-      console.error("HF API Error:", await hfResponse.text());
+      const errorPayload = await hfResponse.json();
+
+      // Проверяем, "просыпается" ли модель
+      if (errorPayload.error && errorPayload.error.includes("is currently loading")) {
+        // Это НЕ ошибка, это "холодный старт"
+        // Отправляем особый ответ, который поймет React
+        return response.status(200).json({
+          "model_is_loading": true,
+          "estimated_time": errorPayload.estimated_time || 30
+        });
+      }
+
+      // Если это другая ошибка (например, 401)
+      console.error("HF API Error:", errorPayload);
       throw new Error(`HF API error: ${hfResponse.statusText}`);
     }
+    // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
     const result = await hfResponse.json();
-
-    // 5. Отправляем ответ обратно в React-приложение
     response.status(200).json(result);
 
   } catch (error) {
