@@ -7,15 +7,14 @@ import quizData from './content/quizzes/lesson-1-quiz.json';
 
 function Quizzes() {
   const [quiz, setQuiz] = useState([]);
-  // НОВОЕ СОСТОЯНИЕ: Хранит ответы пользователя (вопрос: ответ)
-  // Например: { 0: "Пористость...", 1: "За 1 час" }
+  // Хранит ответы пользователя (вопрос: ответ)
   const [selectedAnswers, setSelectedAnswers] = useState({});
 
   useEffect(() => {
     setQuiz(quizData);
   }, []);
 
-  // НОВАЯ ФУНКЦИЯ: Срабатывает при клике на вариант
+  // Срабатывает при клике на вариант
   const handleAnswerClick = (questionIndex, selectedOption) => {
     // Не даем изменить ответ, если он уже дан
     if (selectedAnswers[questionIndex] !== undefined) {
@@ -29,18 +28,18 @@ function Quizzes() {
     });
   };
 
-  // НОВАЯ ФУНКЦИЯ: Сброс теста
+  // Сброс теста
   const resetQuiz = () => {
     setSelectedAnswers({});
   };
 
-  // НОВАЯ ФУНКЦИЯ: Определяет, как покрасить кнопку
+  // Определяет, как покрасить кнопку
   const getButtonClass = (questionIndex, option) => {
     const isSelected = selectedAnswers[questionIndex] === option;
     const isCorrect = quiz[questionIndex]?.correctAnswer === option;
     const answerGiven = selectedAnswers[questionIndex] !== undefined;
 
-    // Если ответ еще не дан, кнопка обычная
+    // Если ответ еще не дан
     if (!answerGiven) {
       return 'bg-slate-50 border-slate-200 text-text-secondary hover:bg-slate-100';
     }
@@ -61,7 +60,7 @@ function Quizzes() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8">
-      {/* ... Кнопка Назад и Заголовок (остаются без изменений) ... */}
+      {/* --- Кнопка Назад --- */}
       <div className="mb-6">
         <Link
           to="/"
@@ -71,6 +70,8 @@ function Quizzes() {
           Вернуться на главную
         </Link>
       </div>
+
+      {/* --- Заголовок --- */}
       <header className="text-center mb-8">
         <h1 className="font-heading text-3xl font-bold text-text-primary mb-2">
           Тест: Урок 1
@@ -91,7 +92,7 @@ function Quizzes() {
               {index + 1}. {item.question}
             </h3>
             
-            {/* ИЗМЕНЕНИЕ: Теперь это кнопки */}
+            {/* Теперь это кнопки */}
             <div className="space-y-2">
               {item.options.map((option, i) => (
                 <button 
@@ -128,7 +129,7 @@ function Quizzes() {
         ))}
       </div>
 
-      {/* ИЗМЕНЕНИЕ: Кнопка "Сбросить" вместо "Показать" */}
+      {/* --- Кнопка "Сбросить" --- */}
       <div className="text-center mt-8">
         <button
           onClick={resetQuiz}
