@@ -27,14 +27,14 @@ export default async function handler(request, response) {
       },
       method: "POST",
       body: JSON.stringify({
-        model: "meta-llama/Llama-3.1-8B-Instruct:fastest",  // Можно добавить суффикс, например ":fastest" для оптимизации
+        model: "meta-llama/Llama-3.1-8B-Instruct:fastest",  // Твоя текущая модель
         messages: [
           {
             role: "user",
             content: inputs
           }
         ],
-        max_tokens: 250,
+        max_tokens: 1024,  // Увеличили до 1024 для более длинных ответов (можно до 4096, но зависит от провайдера и подписки)
         temperature: 0.7,
         top_p: 0.95
       })
