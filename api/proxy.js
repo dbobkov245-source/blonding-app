@@ -16,7 +16,6 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
-    // НОВЫЙ URL от Hugging Face
     const hfResponse = await fetch(
       "https://router.huggingface.co/hf-inference",
       {
@@ -26,7 +25,7 @@ export default async function handler(request, response) {
         },
         method: "POST",
         body: JSON.stringify({
-          model: "google/gemma-7b-it", // Модель указывается в теле запроса
+          model: "google/gemma-7b-it",
           inputs: inputs,
           parameters: {
             max_new_tokens: 250,
@@ -38,7 +37,22 @@ export default async function handler(request, response) {
       }
     );
     
-    const responseBody = await hfResponse.json(); 
+    // Проверяем Content-Type перед парсингом
+    const contentType = hfResponse.headers.get("content-type");
+    let responseBody;
+    
+    if (contentType && contentType.includes("application/json")) {
+      responseBody = await hfResponse.json();
+    } else {
+      // Если не JSON, читаем как текст
+      const textResponse = await hfResponse.text();
+      console.error("Non-JSON response:", textResponse);
+      return response.status(hfResponse.status).json({ 
+        error: 'Invalid API response', 
+        details: textResponse,
+        status: hfResponse.status
+      });
+    }
     
     if (!hfResponse.ok) {
       console.error("HF API Error:", responseBody); 
