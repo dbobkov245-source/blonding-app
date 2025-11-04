@@ -21,23 +21,34 @@ export default async function handler(request, response) {
       }
     );
 
-    // --- НОВАЯ ЛОГИКА ОБРАБОТКИ ОШИБОК ---
+    // --- НОВАЯ УЛУЧШЕННАЯ ЛОГИКА ОБРАБОТКИ ОШИБОК ---
     if (!hfResponse.ok) {
-      const errorPayload = await hfResponse.json();
+      let errorPayload = { error: `HF API error: ${hfResponse.statusText}` };
+
+      // Проверяем, пришел ли ответ в JSON
+      const contentType = hfResponse.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        errorPayload = await hfResponse.json();
+      } else {
+        // Если пришел не JSON (например, HTML-страница ошибки), читаем как текст
+        const errorText = await hfResponse.text();
+        console.error("HF API non-JSON error:", errorText);
+        // Устанавливаем специальную ошибку для "холодного старта"
+        if (hfResponse.status === 503 || errorText.includes("loading")) {
+          errorPayload = { "model_is_loading": true, "estimated_time": 30 };
+        }
+      }
 
       // Проверяем, "просыпается" ли модель
-      if (errorPayload.error && errorPayload.error.includes("is currently loading")) {
-        // Это НЕ ошибка, это "холодный старт"
-        // Отправляем особый ответ, который поймет React
+      if (errorPayload.error && errorPayload.error.includes("is currently loading") || errorPayload.model_is_loading) {
         return response.status(200).json({
           "model_is_loading": true,
           "estimated_time": errorPayload.estimated_time || 30
         });
       }
 
-      // Если это другая ошибка (например, 401)
       console.error("HF API Error:", errorPayload);
-      throw new Error(`HF API error: ${hfResponse.statusText}`);
+      throw new Error(errorPayload.error);
     }
     // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
@@ -45,7 +56,7 @@ export default async function handler(request, response) {
     response.status(200).json(result);
 
   } catch (error) {
-    console.error("Proxy Error:", error);
-    response.status(500).json({ error: 'Internal Server Error' });
+    console.error("Proxy Error:", error.message);
+    response.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
