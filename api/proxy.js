@@ -16,15 +16,14 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
-    // ПРАВИЛЬНЫЙ URL для нового роутера - без /hf-inference в конце!
-    const url = "https://api-inference.huggingface.co/models/google/gemma-7b-it";
+    // НОВЫЙ ПРАВИЛЬНЫЙ URL для Text Generation
+    const url = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it";
     console.log("Request URL:", url);
     
     const hfResponse = await fetch(url, {
       headers: {
         "Authorization": `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json",
-        "x-use-cache": "false" // Отключаем кеш для тестирования
+        "Content-Type": "application/json"
       },
       method: "POST",
       body: JSON.stringify({
@@ -34,18 +33,12 @@ export default async function handler(request, response) {
           temperature: 0.7,
           top_p: 0.95,
           return_full_text: false
-        },
-        options: {
-          use_cache: false,
-          wait_for_model: true // Ждём, если модель загружается
         }
       })
     });
     
     console.log("Response status:", hfResponse.status);
-    console.log("Response content-type:", hfResponse.headers.get("content-type"));
     
-    // Проверяем Content-Type перед парсингом
     const contentType = hfResponse.headers.get("content-type");
     let responseBody;
     
@@ -68,16 +61,11 @@ export default async function handler(request, response) {
       
       // Проверяем "холодный старт"
       if (responseBody.error && typeof responseBody.error === 'string' && 
-          responseBody.error.includes("is currently loading")) {
+          (responseBody.error.includes("is currently loading") || responseBody.estimated_time)) {
         return response.status(503).json({
           model_is_loading: true,
           estimated_time: responseBody.estimated_time || 30
         });
-      }
-      
-      // Если снова редирект на новый API
-      if (responseBody.error && responseBody.error.includes("router.huggingface.co")) {
-        console.error("API migration in progress. Trying alternative approach...");
       }
       
       return response.status(hfResponse.status).json({ 
