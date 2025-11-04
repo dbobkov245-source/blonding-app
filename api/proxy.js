@@ -16,8 +16,9 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
+    // Попробуем старый endpoint - он может всё ещё работать
     const hfResponse = await fetch(
-      "https://router.huggingface.co/hf-inference",
+      "https://api-inference.huggingface.co/models/google/gemma-7b-it",
       {
         headers: {
           "Authorization": `Bearer ${HF_TOKEN}`,
@@ -25,7 +26,6 @@ export default async function handler(request, response) {
         },
         method: "POST",
         body: JSON.stringify({
-          model: "google/gemma-7b-it",
           inputs: inputs,
           parameters: {
             max_new_tokens: 250,
@@ -44,7 +44,6 @@ export default async function handler(request, response) {
     if (contentType && contentType.includes("application/json")) {
       responseBody = await hfResponse.json();
     } else {
-      // Если не JSON, читаем как текст
       const textResponse = await hfResponse.text();
       console.error("Non-JSON response:", textResponse);
       return response.status(hfResponse.status).json({ 
