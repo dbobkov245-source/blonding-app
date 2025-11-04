@@ -1,14 +1,26 @@
 // api/proxy.js
 
 export default async function handler(request, response) {
+  // 1. Проверяем метод
   if (request.method !== 'POST') {
     return response.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
+    // 2. Проверяем, что 'inputs' пришли
     const { inputs } = request.body;
-    const HF_TOKEN = process.env.HF_TOKEN;
+    if (!inputs) {
+      return response.status(400).json({ error: 'No "inputs" field provided in body' });
+    }
 
+    // 3. Проверяем, что токен существует (вы его добавили в Vercel)
+    const HF_TOKEN = process.env.HF_TOKEN;
+    if (!HF_TOKEN) {
+      console.error("HF_TOKEN is not set in Vercel Environment Variables");
+      return response.status(500).json({ error: 'Server configuration error' });
+    }
+
+    // 4. Делаем запрос на Hugging Face
     const hfResponse = await fetch(
       "https://api-inference.huggingface.co/models/google/gemma-7b-it",
       {
@@ -17,46 +29,36 @@ export default async function handler(request, response) {
           "Content-Type": "application/json"
         },
         method: "POST",
-        body: JSON.stringify({ inputs: inputs }),
+        // Добавляем опцию: не ждать, если модель не загружена
+        body: JSON.stringify({ inputs: inputs, options: { wait_for_model: false } }), 
       }
     );
 
-    // --- НОВАЯ УЛУЧШЕННАЯ ЛОГИКА ОБРАБОТКИ ОШИБОК ---
-    if (!hfResponse.ok) {
-      let errorPayload = { error: `HF API error: ${hfResponse.statusText}` };
+    // 5. Пытаемся прочитать ответ как JSON
+    const responseBody = await hfResponse.json(); 
 
-      // Проверяем, пришел ли ответ в JSON
-      const contentType = hfResponse.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        errorPayload = await hfResponse.json();
-      } else {
-        // Если пришел не JSON (например, HTML-страница ошибки), читаем как текст
-        const errorText = await hfResponse.text();
-        console.error("HF API non-JSON error:", errorText);
-        // Устанавливаем специальную ошибку для "холодного старта"
-        if (hfResponse.status === 503 || errorText.includes("loading")) {
-          errorPayload = { "model_is_loading": true, "estimated_time": 30 };
-        }
-      }
+    // 6. Если Hugging Face вернул ошибку
+    if (!hfResponse.ok) {
+      console.error("HF API Error:", responseBody); // Логируем ошибку
 
       // Проверяем, "просыпается" ли модель
-      if (errorPayload.error && errorPayload.error.includes("is currently loading") || errorPayload.model_is_loading) {
-        return response.status(200).json({
+      if (responseBody.error && typeof responseBody.error === 'string' && responseBody.error.includes("is currently loading")) {
+        return response.status(200).json({ // Отправляем 200 OK с особым телом
           "model_is_loading": true,
-          "estimated_time": errorPayload.estimated_time || 30
+          "estimated_time": responseBody.estimated_time || 30
         });
       }
 
-      console.error("HF API Error:", errorPayload);
-      throw new Error(errorPayload.error);
+      // Для любой другой ошибки (например, 401 Unauthorized)
+      return response.status(hfResponse.status).json({ error: 'HF API Error', details: responseBody });
     }
-    // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
-    const result = await hfResponse.json();
-    response.status(200).json(result);
+    // 7. Если все хорошо, отправляем успешный результат
+    response.status(200).json(responseBody);
 
   } catch (error) {
-    console.error("Proxy Error:", error.message);
+    // Эта секция сработает, если 'fetch' упадет или 'hfResponse.json()' не сработает
+    console.error("Proxy Catch Block Error:", error.message);
     response.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
