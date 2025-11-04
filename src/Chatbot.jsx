@@ -16,7 +16,7 @@ export default function Chatbot() {
     const userMessage = input;
     setLoading(true);
     setInput("");
-
+    
     setMessages(prev => [...prev, { from: 'user', text: userMessage }]);
 
     try {
@@ -26,31 +26,31 @@ export default function Chatbot() {
         body: JSON.stringify({ inputs: userMessage }),
       });
 
-      if (!response.ok) {
-        throw new Error('Ошибка сети. Попробуйте позже.');
-      }
-
       const result = await response.json();
 
-      // --- НОВАЯ ЛОГИКА ОБРАБОТКИ ОТВЕТА ---
-      // Проверяем, "просыпается" ли модель
-      if (result.model_is_loading) {
-        setMessages(prev => [...prev, { 
-          from: 'bot', 
-          text: `Модель "просыпается"... Пожалуйста, подождите ${Math.round(result.estimated_time)} секунд и отправьте ваш запрос еще раз.` 
-        }]);
+      // --- НОВАЯ ЛОГИКА ОБРАБОТКИ ОШИБОК ---
+      if (!response.ok) {
+        // Проверяем, "просыпается" ли модель (ошибка 503)
+        if (result.model_is_loading) {
+          setMessages(prev => [...prev, { 
+            from: 'bot', 
+            text: `Модель "просыпается"... Пожалуйста, подождите ${Math.round(result.estimated_time)} секунд и отправьте ваш запрос еще раз.` 
+          }]);
+        } else {
+          // Любая другая ошибка
+          throw new Error(result.details?.error || 'Ошибка сети. Попробуйте позже.');
+        }
         setLoading(false);
-        return; // Завершаем, ждем нового запроса от пользователя
+        return; // Завершаем
       }
       // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
-
+      
       let botResponse = "Извините, я не смог обработать запрос.";
+      // Теперь ответ находится в другом месте (из-за return_full_text: false)
       if (result && result[0] && result[0].generated_text) {
-        const rawText = result[0].generated_text;
-        botResponse = rawText.replace(userMessage, "").trim();
-        if (botResponse.length < 2) botResponse = rawText; 
+        botResponse = result[0].generated_text.trim();
       }
-
+      
       setMessages(prev => [...prev, { from: 'bot', text: botResponse }]);
 
     } catch (error) {
@@ -68,7 +68,7 @@ export default function Chatbot() {
         <Brain className="w-5 h-5 mr-2 text-primary" />
         AI-Ассистент
       </h2>
-
+      
       <div className="flex-grow overflow-y-auto mb-4 space-y-4 pr-2">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -85,7 +85,7 @@ export default function Chatbot() {
           </div>
         )}
       </div>
-
+      
       <form onSubmit={handleSubmit} className="flex space-x-2">
         <input
           type="text"
