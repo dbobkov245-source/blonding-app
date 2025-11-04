@@ -16,9 +16,9 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
     
-    // Правильный URL с моделью в пути
+    // НОВЫЙ URL от Hugging Face
     const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/google/gemma-7b-it",
+      "https://router.huggingface.co/hf-inference",
       {
         headers: {
           "Authorization": `Bearer ${HF_TOKEN}`,
@@ -26,6 +26,7 @@ export default async function handler(request, response) {
         },
         method: "POST",
         body: JSON.stringify({
+          model: "google/gemma-7b-it", // Модель указывается в теле запроса
           inputs: inputs,
           parameters: {
             max_new_tokens: 250,
