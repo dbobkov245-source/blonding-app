@@ -17,7 +17,7 @@ export default async function handler(request, response) {
     }
     
     // НОВЫЙ ПРАВИЛЬНЫЙ URL для Text Generation
-    const url = "https://api-inference.huggingface.co/models/google/gemma-2-2b-it";
+    const url = "https://router.huggingface.co/hf-inference/models/google/gemma-2-2b-it";
     console.log("Request URL:", url);
     
     const hfResponse = await fetch(url, {
