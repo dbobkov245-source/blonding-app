@@ -16,7 +16,7 @@ export default async function handler(request, response) {
 
     // 4. Делаем безопасный запрос на Hugging Face
     const hfResponse = await fetch(
-      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1",
+      "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
       {
         headers: {
           "Authorization": `Bearer ${HF_TOKEN}`,
