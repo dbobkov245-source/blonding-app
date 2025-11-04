@@ -17,18 +17,17 @@ export default async function handler(request, response) {
       return response.status(500).json({ error: 'Server configuration error' });
     }
 
-    // 1. --- ИЗМЕНЕНИЕ: ИСПОЛЬЗУЕМ НОВЫЙ URL API ---
+    // Используем новый URL API
     const hfResponse = await fetch(
-      "https://router.huggingface.co/HF_inference", // <-- Новый URL
+      "https://router.huggingface.co/HF_inference", 
       {
         headers: {
           "Authorization": `Bearer ${HF_TOKEN}`,
           "Content-Type": "application/json"
         },
-        method: "POST,
-        // 2. --- ИЗМЕНЕНИЕ: ОТПРАВЛЯЕМ МОДЕЛЬ В ТЕЛЕ ЗАПРОСА ---
+        method: "POST", // <-- ИСПРАВЛЕНА ОШИБКА (запятая снаружи)
         body: JSON.stringify({
-          model: "google/gemma-7b-it", // <-- Модель теперь здесь
+          model: "google/gemma-7b-it", 
           inputs: inputs,
           options: { wait_for_model: false }
         }), 
